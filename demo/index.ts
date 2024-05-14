@@ -388,21 +388,27 @@ function main() {
           break;
         }
         case CommandType.Rect: {
-          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${
+            cmd.color.a / 255
+          })`;
           c.fillRect(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
           break;
         }
         case CommandType.Text: {
           c.textAlign = "left";
           c.textBaseline = "top";
-          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${
+            cmd.color.a / 255
+          })`;
           c.fillText(cmd.str, cmd.pos.x, cmd.pos.y);
           break;
         }
         case CommandType.Icon: {
           c.textAlign = "center";
           c.textBaseline = "middle";
-          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${
+            cmd.color.a / 255
+          })`;
 
           const x = cmd.rect.x + cmd.rect.w / 2;
           const y = cmd.rect.y + cmd.rect.h / 2;
