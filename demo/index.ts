@@ -38,11 +38,12 @@ function main() {
   if (!canvas) throw new Error("cannot find canvas");
 
   // make canvas update rendering resolution on resize
+  let canvasWidth = canvas.clientWidth;
+  let canvasHeight = canvas.clientHeight;
   {
     const observer = new ResizeObserver(() => {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
-      console.log("Resized to:", [canvas.clientWidth, canvas.clientHeight]);
+      canvasWidth = canvas.clientWidth;
+      canvasHeight = canvas.clientHeight;
     });
     observer.observe(canvas);
   }
@@ -369,7 +370,15 @@ function main() {
     testWindow();
     ctx.end();
 
-    gfx.clear = bgColor[0] + bgColor[1] * 256 + bgColor[2] * 65536;
+    // start drawing
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    // clear canvas to BG color
+    {
+      c.fillStyle = `rgb(${bgColor.join(",")})`;
+      c.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     for (const cmd of ctx.iterCommands()) {
       switch (cmd.type) {
@@ -378,90 +387,50 @@ function main() {
           break;
         }
         case CommandType.Rect: {
-          // set color
-          gfx.r = cmd.color.r / 255;
-          gfx.g = cmd.color.g / 255;
-          gfx.b = cmd.color.b / 255;
-          gfx.a = cmd.color.a / 255;
-
-          gfx.rect(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
+          c.fillRect(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
           break;
         }
         case CommandType.Text: {
-          // set color
-          gfx.r = cmd.color.r / 255;
-          gfx.g = cmd.color.g / 255;
-          gfx.b = cmd.color.b / 255;
-          gfx.a = cmd.color.a / 255;
-
-          gfx.x = cmd.pos.x;
-          gfx.y = cmd.pos.y;
-          // TODO: Handle:
-          // cmd.font
-          // Clipping rect
-          gfx.drawstr(cmd.str);
+          c.textAlign = "left";
+          c.textBaseline = "top";
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
+          c.fillText(cmd.str, cmd.pos.x, cmd.pos.y);
           break;
         }
         case CommandType.Icon: {
-          // set color
-          gfx.r = cmd.color.r / 255;
-          gfx.g = cmd.color.g / 255;
-          gfx.b = cmd.color.b / 255;
-          gfx.a = cmd.color.a / 255;
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillStyle = `rgba(${cmd.color.r}, ${cmd.color.g}, ${cmd.color.b}, ${cmd.color.a})`;
 
-          gfx.x = cmd.rect.x;
-          gfx.y = cmd.rect.y;
-          // TODO: Handle:
-          // cmd.font
-          // Clipping rect
+          const x = cmd.rect.x + cmd.rect.w / 2;
+          const y = cmd.rect.y + cmd.rect.h / 2;
           switch (cmd.id) {
             case IconId.Close: {
-              gfx.drawstr(
-                "X",
-                DrawStrFlags.CenterHorizontally | DrawStrFlags.CenterVertically,
-                cmd.rect.x + cmd.rect.w,
-                cmd.rect.y + cmd.rect.h,
-              );
+              c.fillText("X", x, y);
               break;
             }
             case IconId.Check: {
-              gfx.drawstr(
-                "V",
-                DrawStrFlags.CenterHorizontally | DrawStrFlags.CenterVertically,
-                cmd.rect.x + cmd.rect.w,
-                cmd.rect.y + cmd.rect.h,
-              );
+              c.fillText("V", x, y);
               break;
             }
             case IconId.Collapsed: {
-              gfx.drawstr(
-                ">",
-                DrawStrFlags.CenterHorizontally | DrawStrFlags.CenterVertically,
-                cmd.rect.x + cmd.rect.w,
-                cmd.rect.y + cmd.rect.h,
-              );
+              c.fillText(">", x, y);
               break;
             }
             case IconId.Expanded: {
-              gfx.drawstr(
-                "v",
-                DrawStrFlags.CenterHorizontally | DrawStrFlags.CenterVertically,
-                cmd.rect.x + cmd.rect.w,
-                cmd.rect.y + cmd.rect.h,
-              );
+              c.fillText("v", x, y);
               break;
             }
             default:
-              error(`unhandled icon type: ${cmd}`);
+              throw new Error(`unhandled icon type: ${cmd}`);
           }
           break;
         }
         default:
-          error(`unhandled command type: ${cmd}`);
+          throw new Error(`unhandled command type: ${cmd}`);
       }
     }
-
-    gfx.update();
   });
 }
 
