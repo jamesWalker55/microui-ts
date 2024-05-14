@@ -231,7 +231,6 @@ export type TextWidthFunc = (font: Font, str: string, len?: number) => number;
 export type TextHeightFunc = (font: Font) => number;
 
 const MU_MAX_FMT = 127;
-const MU_SLIDER_FMT = "%.2f";
 
 export class Context {
   /* callbacks */
@@ -1296,7 +1295,7 @@ export class Context {
     low: number,
     high: number,
     step: number | null = null,
-    fmt: string = MU_SLIDER_FMT,
+    precision: number = 2,
     opt: Option = Option.AlignCenter,
   ): number {
     // int x, w, res = 0;
@@ -1342,7 +1341,7 @@ export class Context {
     this.drawControlFrame(id, thumb, ColorId.Button, opt);
 
     // draw text
-    const buf = string.format(fmt, value);
+    const buf = value.toFixed(precision);
     this.drawControlText(buf, base, ColorId.Text, opt);
 
     return value;
