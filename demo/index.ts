@@ -34,19 +34,25 @@ function deferLoop(func: (stop: () => void) => void) {
 }
 
 function main() {
-  gfx.init("Test window", 500, 500);
-  gfx.setfont(1, "Arial", 12);
+  const canvas = document.getElementById("demo-canvas") as HTMLCanvasElement;
+  if (!canvas) throw new Error("cannot find canvas");
+
+  const c = canvas.getContext("2d");
+  if (!c) throw new Error("failed to initialise 2d context");
+
+  const fontHeight = (() => {
+    const metrics = c.measureText("Aj");
+    return metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+  })();
 
   const ctx = new Context(
     (font, str, len) => {
-      if (len !== undefined) {
-        str = str.slice(0, len);
-      }
-      const [width, _] = gfx.measurestr(str);
-      return width;
+      if (len !== undefined) str = str.slice(0, len);
+      const metrics = c.measureText(str);
+      return metrics.width;
     },
     (font) => {
-      return gfx.texth;
+      return fontHeight;
     },
   );
 
@@ -222,15 +228,7 @@ function main() {
     low: number,
     high: number,
   ): number {
-    const res = ctx.slider(
-      name,
-      value,
-      low,
-      high,
-      0,
-      "%.0f",
-      Option.AlignCenter,
-    );
+    const res = ctx.slider(name, value, low, high, 0, 0, Option.AlignCenter);
     return Math.floor(res);
   }
 
