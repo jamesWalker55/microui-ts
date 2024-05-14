@@ -51,6 +51,9 @@ function main() {
   const c = canvas.getContext("2d");
   if (!c) throw new Error("failed to initialise 2d context");
 
+  // save state (to clear clip region later)
+  c.save();
+
   const fontHeight = (() => {
     const metrics = c.measureText("Aj");
     return metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
@@ -384,7 +387,15 @@ function main() {
     for (const cmd of ctx.iterCommands()) {
       switch (cmd.type) {
         case CommandType.Clip: {
-          console.debug("TODO: Clip");
+          // clear existing clip region
+          c.restore();
+          c.save();
+
+          // new clip region
+          c.beginPath();
+          c.rect(cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h);
+          c.clip();
+
           break;
         }
         case CommandType.Rect: {
