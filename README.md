@@ -1,15 +1,9 @@
 # microui-ts
 
-To install dependencies:
+![Screenshot of some windows against a grey background](docs/screenshot.png)
 
-```bash
-bun install
-```
+A port of rxi's [microui](https://github.com/rxi/microui) to TypeScript.
 
-To run:
+- [Link to Demo](https://jameswalker55.github.io/microui-ts/)
 
-```bash
-bun run src/index.ts
-```
-
-This project was created using `bun init` in bun v1.0.29. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+For usage, see `demo/index.ts`.
