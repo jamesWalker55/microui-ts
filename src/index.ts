@@ -230,7 +230,6 @@ type Command =
 export type TextWidthFunc = (font: Font, str: string, len?: number) => number;
 export type TextHeightFunc = (font: Font) => number;
 
-const MU_REAL_FMT = "%.3g";
 const MU_MAX_FMT = 127;
 const MU_SLIDER_FMT = "%.2f";
 
@@ -1266,7 +1265,7 @@ export class Context {
       this.hover === id
     ) {
       this.numberEdit = id;
-      this.numberEditBuf = string.format(MU_REAL_FMT, value);
+      this.numberEditBuf = value.toPrecision(3);
     }
     if (this.numberEdit === id) {
       const [res, newVal] = this.textboxRaw(
