@@ -326,7 +326,7 @@ function main() {
       inputState.alt = isDown;
     } else if (e.key === "Control" || e.key === "Meta") {
       inputState.ctrl = isDown;
-    } else if (e.key.length === 1) {
+    } else if (e.key.length === 1 && isDown) {
       // HACK: Only detect character inputs, assume all inputs must have length 1
       inputState.chars.push(e.key);
     }
@@ -362,6 +362,7 @@ function main() {
       );
 
       ctx.inputText(inputState.chars.join(""));
+      inputState.chars = [];
     }
 
     ctx.begin();
