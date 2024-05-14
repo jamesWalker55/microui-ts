@@ -28,7 +28,7 @@ function deferLoop(func: (stop: () => void) => void) {
 
     if (shouldStop) return;
 
-    reaper.defer(inner);
+    window.requestAnimationFrame(inner);
   }
   inner();
 }
@@ -36,6 +36,16 @@ function deferLoop(func: (stop: () => void) => void) {
 function main() {
   const canvas = document.getElementById("demo-canvas") as HTMLCanvasElement;
   if (!canvas) throw new Error("cannot find canvas");
+
+  // make canvas update rendering resolution on resize
+  {
+    const observer = new ResizeObserver(() => {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+      console.log("Resized to:", [canvas.clientWidth, canvas.clientHeight]);
+    });
+    observer.observe(canvas);
+  }
 
   const c = canvas.getContext("2d");
   if (!c) throw new Error("failed to initialise 2d context");
@@ -72,7 +82,7 @@ function main() {
     logWindowLogUpdated = true;
   }
 
-  function logWindow(ctx: Context) {
+  function logWindow() {
     if (ctx.beginWindow("Log Window", { x: 350, y: 40, w: 300, h: 200 })) {
       /* output text panel */
       ctx.layoutRow([-1], -25);
@@ -107,7 +117,7 @@ function main() {
     }
   }
 
-  function testWindow(ctx: Context) {
+  function testWindow() {
     if (ctx.beginWindow("Demo Window", { x: 40, y: 40, w: 300, h: 450 })) {
       const win = ctx.getCurrentContainer();
       win.rect.w = Math.max(win.rect.w, 240);
@@ -222,7 +232,6 @@ function main() {
   }
 
   function uint8Slider(
-    ctx: Context,
     name: string,
     value: number,
     low: number,
@@ -249,7 +258,7 @@ function main() {
     ["scrollthumb:", ColorId.ScrollThumb],
   ];
 
-  function styleWindow(ctx: Context) {
+  function styleWindow() {
     if (ctx.beginWindow("Style Editor", { x: 350, y: 250, w: 300, h: 240 })) {
       const sw = ctx.getCurrentContainer().body.w * 0.14;
       ctx.layoutRow([80, sw, sw, sw, sw, -1], 0);
@@ -257,21 +266,27 @@ function main() {
       for (let i = 0; i < styleWindowFields.length; i++) {
         const [label, colorId] = styleWindowFields[i];
         ctx.label(label);
-        ctx.style.colors[colorId].r = uint8Slider(ctx, `${label}!r`, ctx.style.colors[colorId].r, 0, 255);
-        ctx.style.colors[colorId].g = uint8Slider(ctx, `${label}!g`, ctx.style.colors[colorId].g, 0, 255);
-        ctx.style.colors[colorId].b = uint8Slider(ctx, `${label}!b`, ctx.style.colors[colorId].b, 0, 255);
-        ctx.style.colors[colorId].a = uint8Slider(ctx, `${label}!a`, ctx.style.colors[colorId].a, 0, 255);
+        ctx.style.colors[colorId].r = uint8Slider(`${label}!r`, ctx.style.colors[colorId].r, 0, 255);
+        ctx.style.colors[colorId].g = uint8Slider(`${label}!g`, ctx.style.colors[colorId].g, 0, 255);
+        ctx.style.colors[colorId].b = uint8Slider(`${label}!b`, ctx.style.colors[colorId].b, 0, 255);
+        ctx.style.colors[colorId].a = uint8Slider(`${label}!a`, ctx.style.colors[colorId].a, 0, 255);
         ctx.drawRect(ctx.layoutNext(), ctx.style.colors[colorId]);
       }
       ctx.endWindow();
     }
   }
 
-  const downKeys = {
+  const inputState = {
     // mouse
+    mouseX: 0,
+    mouseY: 0,
     left: false,
     middle: false,
     right: false,
+
+    // scroll
+    scrollX: 0,
+    scrollY: 0,
 
     // keyboard
     shift: false,
@@ -279,78 +294,79 @@ function main() {
     alt: false,
     backspace: false,
     return: false,
+
+    // typing
+    chars: [] as string[],
   };
-  const downChars: string[] = [];
+
+  function updateMouseState(e: MouseEvent) {
+    inputState.mouseX = e.clientX;
+    inputState.mouseY = e.clientY;
+    inputState.left = (e.buttons & 1) !== 0;
+    inputState.right = (e.buttons & 2) !== 0;
+    inputState.middle = (e.buttons & 4) !== 0;
+
+    inputState.alt = e.altKey;
+    inputState.ctrl = e.ctrlKey || e.metaKey;
+    inputState.shift = e.shiftKey;
+  }
+  canvas.addEventListener("mousemove", updateMouseState);
+  canvas.addEventListener("mousedown", updateMouseState);
+  canvas.addEventListener("mouseup", updateMouseState);
+
+  function updateKeyboardState(e: KeyboardEvent, isDown: boolean) {
+    if (e.key === "Enter") {
+      inputState.return = isDown;
+    } else if (e.key === "Backspace") {
+      inputState.backspace = isDown;
+    } else if (e.key === "Shift") {
+      inputState.shift = isDown;
+    } else if (e.key === "Alt") {
+      inputState.alt = isDown;
+    } else if (e.key === "Control" || e.key === "Meta") {
+      inputState.ctrl = isDown;
+    } else if (e.key.length === 1) {
+      // HACK: Only detect character inputs, assume all inputs must have length 1
+      inputState.chars.push(e.key);
+    }
+  }
+  window.addEventListener("keydown", (e) => updateKeyboardState(e, true));
+  window.addEventListener("keyup", (e) => updateKeyboardState(e, false));
+
+  window.addEventListener("wheel", (e) => {
+    inputState.scrollX += e.deltaX;
+    inputState.scrollY += e.deltaY;
+  });
 
   deferLoop((stop) => {
-    // handle char input
+    // handle input
     {
-      downKeys.backspace = false;
-      downKeys.return = false;
-      downChars.length = 0;
-      while (true) {
-        const char = gfx.getchar();
-        if (char === -1) return stop();
-        if (char === 0) break;
+      ctx.inputScroll(inputState.scrollX, inputState.scrollY);
+      inputState.scrollX = 0;
+      inputState.scrollY = 0;
 
-        if (char === 8) {
-          // 8 is backspace / ctrl+h
-          downKeys.backspace = true;
-          continue;
-        } else if (char === 13) {
-          // 13 is enter / ctrl+?
-          downKeys.return = true;
-          continue;
-        }
+      ctx.inputMouseMove(inputState.mouseX, inputState.mouseY);
 
-        const isUnicode = char >>> 24 === 117; // 'u'
-        if (isUnicode) {
-          const unicodeChar = char & 0xffffff;
-          downChars.push(utf8.char(unicodeChar));
-          continue;
-        }
-
-        // not unicode, only allow normal ASCII characters
-        if (0x20 <= char && char <= 0x7e) {
-          downChars.push(utf8.char(char));
-          continue;
-        }
-
-        console.log(char, isUnicode);
-      }
-
-      ctx.inputScroll(gfx.mouse_wheel, gfx.mouse_hwheel);
-      gfx.mouse_wheel = 0;
-      gfx.mouse_hwheel = 0;
-
-      ctx.inputMouseMove(gfx.mouse_x, gfx.mouse_y);
-
-      downKeys.left = (gfx.mouse_cap & MouseCap.LeftMouse) !== 0;
-      downKeys.middle = (gfx.mouse_cap & MouseCap.MiddleMouse) !== 0;
-      downKeys.right = (gfx.mouse_cap & MouseCap.RightMouse) !== 0;
-      downKeys.ctrl = (gfx.mouse_cap & MouseCap.CommandKey) !== 0;
-      downKeys.alt = (gfx.mouse_cap & MouseCap.OptionKey) !== 0;
-      downKeys.shift = (gfx.mouse_cap & MouseCap.ShiftKey) !== 0;
       ctx.inputMouseContinuous(
-        (downKeys.left ? MouseButton.Left : 0) |
-          (downKeys.middle ? MouseButton.Middle : 0) |
-          (downKeys.right ? MouseButton.Right : 0),
+        (inputState.left ? MouseButton.Left : 0) |
+          (inputState.middle ? MouseButton.Middle : 0) |
+          (inputState.right ? MouseButton.Right : 0),
       );
       ctx.inputKeyContinuous(
-        (downKeys.alt ? Key.Alt : 0) |
-          (downKeys.backspace ? Key.Backspace : 0) |
-          (downKeys.ctrl ? Key.Ctrl : 0) |
-          (downKeys.return ? Key.Return : 0) |
-          (downKeys.shift ? Key.Shift : 0),
+        (inputState.alt ? Key.Alt : 0) |
+          (inputState.backspace ? Key.Backspace : 0) |
+          (inputState.ctrl ? Key.Ctrl : 0) |
+          (inputState.return ? Key.Return : 0) |
+          (inputState.shift ? Key.Shift : 0),
       );
 
-      ctx.inputText(downChars.join(""));
+      ctx.inputText(inputState.chars.join(""));
     }
 
     ctx.begin();
-    styleWindow(ctx);
-    logWindow(ctx);
-    testWindow(ctx);
+    styleWindow();
+    logWindow();
+    testWindow();
     ctx.end();
 
     gfx.clear = bgColor[0] + bgColor[1] * 256 + bgColor[2] * 65536;
