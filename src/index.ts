@@ -1,6 +1,10 @@
 import { HASH_INITIAL, hashString } from "./hash";
 import { type NewType } from "./newtype";
 
+function error(msg: string): never {
+  throw new Error(msg);
+}
+
 type Vec2 = { x: number; y: number };
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -420,10 +424,8 @@ export class Context {
   }
 
   getCurrentContainer() {
-    assert(
-      this.containerStack.length > 0,
-      "attempted to get current container when there are no containers",
-    );
+    if (this.containerStack.length === 0)
+      error("attempted to get current container when there are no containers");
     return this.containerStack[this.containerStack.length - 1];
   }
 
@@ -439,7 +441,7 @@ export class Context {
   }
 
   getClipRect(): Rect {
-    assert(this.clipStack.length > 0);
+    if (this.clipStack.length === 0) error("clip stack is empty");
     return this.clipStack[this.clipStack.length - 1];
   }
 
@@ -481,10 +483,8 @@ export class Context {
 
   private pushJump(dstIdx: number | null, oob: boolean = false): number {
     if (!oob) {
-      assert(
-        dstIdx !== null && 0 <= dstIdx && dstIdx < this.commands.length,
-        "attempted to push jump command to out-of-bounds",
-      );
+      if (dstIdx === null || !(0 <= dstIdx && dstIdx < this.commands.length))
+        error("attempted to push jump command to out-of-bounds");
     }
 
     const cmd: JumpCommand = { type: CommandType.Jump, dstIdx };
@@ -728,7 +728,7 @@ export class Context {
 
   private getLayout() {
     const count = this.layoutStack.length;
-    assert(count > 0, "layout stack is empty");
+    if (count === 0) error("layout stack is empty");
 
     return this.layoutStack[count - 1];
   }
@@ -736,10 +736,8 @@ export class Context {
   layoutRow(widths: number[] | null, height: number) {
     const layout = this.getLayout();
     if (widths !== null) {
-      assert(
-        widths.length > 0,
-        "list of widths must contain at least 1 number",
-      );
+      if (widths.length === 0)
+        error("list of widths must contain at least 1 number");
       layout.widths = [...widths];
     } else {
       // do nothing, reuse existing widths
@@ -976,10 +974,11 @@ export class Context {
 
   end() {
     // check stacks
-    assert(this.containerStack.length === 0);
-    assert(this.clipStack.length === 0);
-    assert(this.idStack.length === 0);
-    assert(this.layoutStack.length === 0);
+    if (this.containerStack.length !== 0)
+      error("container stack should be empty");
+    if (this.clipStack.length !== 0) error("clip stack should be empty");
+    if (this.idStack.length !== 0) error("id stack should be empty");
+    if (this.layoutStack.length !== 0) error("layout stack should be empty");
 
     // handle scroll input
     if (this.scrollTarget !== null) {
@@ -1056,11 +1055,9 @@ export class Context {
 
       const cmd = this.commands[i];
       if (cmd.type === CommandType.Jump) {
-        assert(
-          cmd.dstIdx !== null,
-          "attempt to perform Jump command with null destination",
-        );
-        i = cmd.dstIdx!;
+        if (cmd.dstIdx === null)
+          error("attempt to perform Jump command with null destination");
+        i = cmd.dstIdx;
         continue;
       }
 
@@ -1356,8 +1353,8 @@ export class Context {
     const res = this._header(label, opt, true);
     if (res && (res & Response.Active) !== 0) {
       this.getLayout().indent += this.style.indent;
-      assert(this.lastId !== null);
-      this.idStack.push(this.lastId!);
+      if (this.lastId === null) error("last id is not set");
+      this.idStack.push(this.lastId);
     }
     return res;
   }
@@ -1450,11 +1447,9 @@ export class Context {
   beginPanel(name: string, opt: Option = Option.None) {
     const id = this.getId(name);
     this.idStack.push(id);
-    assert(
-      this.lastId !== null,
-      "attempted to begin panel with no parent container",
-    );
-    const cnt = this.getContainer(this.lastId!, opt);
+    if (this.lastId === null)
+      error("attempted to begin panel with no parent container");
+    const cnt = this.getContainer(this.lastId, opt);
     if (cnt === null) error("panel must never be closed!");
 
     cnt.rect = this.layoutNext();
