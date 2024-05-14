@@ -1451,7 +1451,7 @@ export class Context {
     if (cnt === null) error("panel must never be closed!");
 
     cnt.rect = this.layoutNext();
-    if ((opt & Option.NoFrame) !== 0) {
+    if ((opt & Option.NoFrame) === 0) {
       this.drawFrame(cnt.rect, ColorId.PanelBG);
     }
     this.containerStack.push(cnt);
