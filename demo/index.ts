@@ -1,5 +1,3 @@
-import * as log from "./log";
-import { DrawStrFlags, MouseCap } from "./reaperEnums";
 import {
   ColorId,
   CommandType,
@@ -9,65 +7,14 @@ import {
   MouseButton,
   Option,
   Response,
-} from "./ui";
+} from "../src/index";
 
-class ThemeParameter {
-  constructor(
-    public readonly idx: number,
-    public readonly name: string,
-    public readonly desc: string,
-    public readonly initialValue: number,
-    private currentValue: number,
-    public readonly defaultValue: number,
-    public readonly minValue: number,
-    public readonly maxValue: number,
-  ) {}
-
-  static get(i: number) {
-    const [name, desc, initialValue, defaultValue, minValue, maxValue] =
-      reaper.ThemeLayout_GetParameter(i);
-    if (name === null) return null;
-
-    return new ThemeParameter(
-      i,
-      name,
-      desc,
-      initialValue,
-      initialValue,
-      defaultValue,
-      minValue,
-      maxValue,
-    );
-  }
-
-  static getAll() {
-    const params: ThemeParameter[] = [];
-
-    let i = 0;
-    while (true) {
-      const param = ThemeParameter.get(i);
-      if (param === null) return params;
-
-      params.push(param);
-      i += 1;
-    }
-  }
-
-  /** This sets the parameter temporarily. Changes will be lost upon reload. */
-  set value(x: number) {
-    this.currentValue = x;
-    reaper.ThemeLayout_SetParameter(this.idx, x, false);
-  }
-
-  /** Save the settings. Changes will persist upon reload. */
-  save() {
-    // TODO: Update this.initialValue
-    reaper.ThemeLayout_SetParameter(this.idx, this.currentValue, true);
-  }
-
-  get value() {
-    return this.currentValue;
-  }
+function hex2(val: number): string {
+  val = Math.floor(val);
+  const str = val.toString(16);
+  if (str.length > 2)
+    throw new Error("attempted to format hex number with over 2 digits");
+  return str.padStart(2, "0");
 }
 
 function deferLoop(func: (stop: () => void) => void) {
@@ -257,7 +204,7 @@ function main() {
           a: 255,
         });
         ctx.drawControlText(
-          string.format("#%02X%02X%02X", bgColor[0], bgColor[1], bgColor[2]),
+          `#${hex2(bgColor[0])}${hex2(bgColor[1])}${hex2(bgColor[2])}`,
           r,
           ColorId.Text,
           Option.AlignCenter,
@@ -371,7 +318,7 @@ function main() {
           continue;
         }
 
-        log.info(char, isUnicode);
+        console.log(char, isUnicode);
       }
 
       ctx.inputScroll(gfx.mouse_wheel, gfx.mouse_hwheel);
@@ -413,7 +360,7 @@ function main() {
     for (const cmd of ctx.iterCommands()) {
       switch (cmd.type) {
         case CommandType.Clip: {
-          log.debug("TODO: Clip");
+          console.debug("TODO: Clip");
           break;
         }
         case CommandType.Rect: {
