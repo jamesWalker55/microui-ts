@@ -1,6 +1,5 @@
-import { deepcopy } from "./deepcopy";
 import { HASH_INITIAL, hashString } from "./hash";
-import { NewType } from "./newtype";
+import { type NewType } from "./newtype";
 
 type Vec2 = { x: number; y: number };
 export type Rect = { x: number; y: number; w: number; h: number };
@@ -273,7 +272,7 @@ export class Context {
   constructor(
     textWidth: TextWidthFunc,
     textHeight: TextHeightFunc,
-    style: Style = deepcopy(DEFAULT_STYLE),
+    style: Style = structuredClone(DEFAULT_STYLE),
   ) {
     this.textWidth = textWidth;
     this.textHeight = textHeight;
@@ -670,7 +669,7 @@ export class Context {
       const id = this.getId(`!scrollbar${scrollDir}`);
 
       /* get sizing / positioning */
-      const base = deepcopy(viewBounds);
+      const base = structuredClone(viewBounds);
       base[otherDir] = viewBounds[otherDir] + viewBounds[otherLength];
       base[otherLength] = this.style.scrollbarSize;
 
@@ -686,7 +685,7 @@ export class Context {
 
       /* draw base and thumb */
       this.drawFrame(base, ColorId.ScrollBase);
-      const thumb = deepcopy(base);
+      const thumb = structuredClone(base);
       thumb[scrollLength] = Math.max(
         this.style.thumbSize,
         (base[scrollLength] * viewBounds[scrollLength]) /
@@ -709,7 +708,7 @@ export class Context {
 
   private scrollbars(cnt: Container, body: Rect) {
     const sz = this.style.scrollbarSize;
-    const cs = deepcopy(cnt.contentSize);
+    const cs = structuredClone(cnt.contentSize);
     cs.x += this.style.padding * 2;
     cs.y += this.style.padding * 2;
     this.pushClipRect(body);
@@ -864,7 +863,7 @@ export class Context {
       // otherwise, use existing rect
       rect = cnt.rect;
     }
-    const body = deepcopy(rect);
+    const body = structuredClone(rect);
 
     this.beginRootContainer(cnt);
 
